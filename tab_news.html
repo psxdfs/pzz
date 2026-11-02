@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<!--
+  作者：朴哲震
+  建立时间：2026-11-02 14:30
+  使用模型：GLM-5.3-Flash
+  功能名称及简介：tab_news.html —— 新闻排行榜页面（还原参考照片）
+  说明：两个选项卡（点击排行 / 评论排行），下方各有 10 条排名新闻列表，
+        每条显示 排名序号 + 标题 + 点击/评论数；
+        Tab 切换逻辑由 js/pzz_tab.js 可复用组件提供。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新闻排行 · Tab 选项卡练习</title>
+<style>
+  /* ===== 基础变量与重置 ===== */
+  :root {
+    --pzz_page_bg: #f5f5f5;          /* 页面外围浅灰 */
+    --pzz_card_bg: #ffffff;          /* 卡片白底 */
+    --pzz_ink: #333333;              /* 正文深灰 */
+    --pzz_ink_soft: #888888;         /* 次要文字灰 */
+    --pzz_line: #e8e8e8;             /* 分割线 */
+    --pzz_tab_bg: #f0f0f0;           /* Tab 条底色 */
+    --pzz_tab_active: #ffffff;       /* 选中 Tab 背景 */
+    --pzz_tab_ink: #666666;          /* 未选中 Tab 字色 */
+    --pzz_tab_active_ink: #333333;   /* 选中 Tab 字色 */
+    --pzz_rank: #999999;             /* 排名序号 */
+    --pzz_rank_top3: #d9534f;        /* 前三名序号（点缀红） */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "SimSun", "Segoe UI", system-ui, sans-serif;
+    background: var(--pzz_page_bg);
+    color: var(--pzz_ink);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  .pzz_wrap { max-width: 520px; margin: 0 auto; }
+
+  /* ===== 回首页链接 ===== */
+  .pzz_home_link {
+    display: inline-block;
+    font-size: 13px;
+    color: var(--pzz_ink_soft);
+    text-decoration: none;
+    margin-bottom: 12px;
+  }
+  .pzz_home_link:hover { color: var(--pzz_rank_top3); text-decoration: underline; }
+
+  /* ===== 排行榜卡片 ===== */
+  .pzz_rank_card {
+    background: var(--pzz_card_bg);
+    border: 1px solid var(--pzz_line);
+  }
+
+  /* ===== Tab 按钮条 ===== */
+  .pzz_tabs_box {
+    display: flex;
+    border-bottom: 1px solid var(--pzz_line);
+    background: var(--pzz_tab_bg);
+  }
+  .pzz_tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 12px 0;
+    font-size: 15px;
+    color: var(--pzz_tab_ink);
+    font-weight: normal;
+    transition: background .15s, color .15s;
+  }
+  .pzz_tab:hover { color: var(--pzz_tab_active_ink); }
+  .pzz_tab.pzz_active {
+    background: var(--pzz_tab_active);
+    color: var(--pzz_tab_active_ink);
+    font-weight: bold;
+    border-bottom: 2px solid var(--pzz_rank_top3);
+  }
+
+  /* ===== 面板区 ===== */
+  .pzz_panel { display: none; }
+  .pzz_panel.pzz_active { display: block; }
+
+  /* ===== 排行列表 ===== */
+  .pzz_rank_list { list-style: none; padding: 0 16px; }
+  .pzz_rank_list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--pzz_line);
+    font-size: 14px;
+  }
+  .pzz_rank_list li:last-child { border-bottom: none; }
+
+  /* 排名序号 */
+  .pzz_rank_num {
+    flex: none;
+    width: 22px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--pzz_rank);
+    font-weight: bold;
+  }
+  /* 前三名红色序号 */
+  .pzz_rank_list li:nth-child(1) .pzz_rank_num,
+  .pzz_rank_list li:nth-child(2) .pzz_rank_num,
+  .pzz_rank_list li:nth-child(3) .pzz_rank_num {
+    color: var(--pzz_rank_top3);
+  }
+
+  /* 新闻标题 */
+  .pzz_rank_title {
+    flex: 1;
+    color: var(--pzz_ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+  .pzz_rank_title:hover { color: var(--pzz_rank_top3); }
+
+  /* 点击量 / 评论数 */
+  .pzz_rank_count {
+    flex: none;
+    font-size: 13px;
+    color: var(--pzz_ink_soft);
+    font-variant-numeric: tabular-nums;   /* 等宽数字，排行榜对齐好看 */
+  }
+
+  footer.pzz_foot {
+    text-align: center;
+    color: var(--pzz_ink_soft);
+    font-size: 12px;
+    padding: 14px 0 0;
+  }
+</style>
+</head>
+<body>
+<div class="pzz_wrap">
+
+  <a class="pzz_home_link" href="index.html">← 返回首页</a>
+
+  <main class="pzz_rank_card">
+    <!-- 选项卡按钮条：data-pzz-tab 的值 = 面板索引（从 0 开始） -->
+    <div class="pzz_tabs_box" id="pzz_rankTabs" role="tablist">
+      <button class="pzz_tab pzz_active" data-pzz-tab="0">点击排行</button>
+      <button class="pzz_tab" data-pzz-tab="1">评论排行</button>
+    </div>
+
+    <!-- 内容面板：子元素顺序与按钮一一对应 -->
+    <div id="pzz_rankPanels">
+
+      <!-- ===== 点击排行 ===== -->
+      <section class="pzz_panel pzz_active">
+        <ul class="pzz_rank_list">
+          <li><span class="pzz_rank_num">1</span><span class="pzz_rank_title">中国各城市房子还要卖多少年（详细数据）</span><span class="pzz_rank_count">187706</span></li>
+          <li><span class="pzz_rank_num">2</span><span class="pzz_rank_title">任志强：60多年来 我不知道国企给了我们</span><span class="pzz_rank_count">171180</span></li>
+          <li><span class="pzz_rank_num">3</span><span class="pzz_rank_title">三精制药跳楼老总被查因华润商案 省食</span><span class="pzz_rank_count">127631</span></li>
+          <li><span class="pzz_rank_num">4</span><span class="pzz_rank_title">内地17省铺开不动产统一登记职责整合工作</span><span class="pzz_rank_count">113865</span></li>
+          <li><span class="pzz_rank_num">5</span><span class="pzz_rank_title">山西煤老板南楼替签99年租约 8年投资期</span><span class="pzz_rank_count">82770</span></li>
+          <li><span class="pzz_rank_num">6</span><span class="pzz_rank_title">北京城南楼市“沦陷” 变相降价措施加码</span><span class="pzz_rank_count">62971</span></li>
+          <li><span class="pzz_rank_num">7</span><span class="pzz_rank_title">中国3D打印技术取得重大突破 近1200人连</span><span class="pzz_rank_count">27456</span></li>
+          <li><span class="pzz_rank_num">8</span><span class="pzz_rank_title">重赔利空突袭全球暴跌 A股或周五无悬</span><span class="pzz_rank_count">25322</span></li>
+          <li><span class="pzz_rank_num">9</span><span class="pzz_rank_title">七匹狼早盘上演奇葩一幕：单笔4手卖单剧</span><span class="pzz_rank_count">20912</span></li>
+          <li><span class="pzz_rank_num">10</span><span class="pzz_rank_title">长油小股东主导股东大会 当场爆料董事长</span><span class="pzz_rank_count">11667</span></li>
+        </ul>
+      </section>
+
+      <!-- ===== 评论排行 ===== -->
+      <section class="pzz_panel">
+        <ul class="pzz_rank_list">
+          <li><span class="pzz_rank_num">1</span><span class="pzz_rank_title">任志强：60多年来 我不知道国企给了我们什么</span><span class="pzz_rank_count">4321</span></li>
+          <li><span class="pzz_rank_num">2</span><span class="pzz_rank_title">北京城南楼市“沦陷” 变相降价措施加码</span><span class="pzz_rank_count">3108</span></li>
+          <li><span class="pzz_rank_num">3</span><span class="pzz_rank_title">中国各城市房子还要卖多少年（详细数据）</span><span class="pzz_rank_count">2897</span></li>
+          <li><span class="pzz_rank_num">4</span><span class="pzz_rank_title">重赔利空突袭全球暴跌 A股或周五无悬念</span><span class="pzz_rank_count">2456</span></li>
+          <li><span class="pzz_rank_num">5</span><span class="pzz_rank_title">内地17省铺开不动产统一登记职责整合</span><span class="pzz_rank_count">1987</span></li>
+          <li><span class="pzz_rank_num">6</span><span class="pzz_rank_title">三精制药跳楼老总被查 因华润商案牵出</span><span class="pzz_rank_count">1722</span></li>
+          <li><span class="pzz_rank_num">7</span><span class="pzz_rank_title">七匹狼早盘上演奇葩一幕：单笔4手卖单</span><span class="pzz_rank_count">1455</span></li>
+          <li><span class="pzz_rank_num">8</span><span class="pzz_rank_title">山西煤老板南楼替签99年租约 8年投资期</span><span class="pzz_rank_count">1203</span></li>
+          <li><span class="pzz_rank_num">9</span><span class="pzz_rank_title">长油小股东主导股东大会 当场爆料董事长</span><span class="pzz_rank_count">988</span></li>
+          <li><span class="pzz_rank_num">10</span><span class="pzz_rank_title">中国3D打印技术取得重大突破 近1200人</span><span class="pzz_rank_count">765</span></li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="pzz_foot">高级网页设计课堂实践 · Tab 选项卡组件（可复用）</footer>
+</div>
+
+<!-- Tab 逻辑：外部引用 js 文件夹中的可复用组件 -->
+<script src="js/pzz_tab.js"></script>
+<script>
+  /* 作者：朴哲震 | 建立时间：2026-11-02 14:30 | 使用模型：GLM-5.3-Flash
+     功能：页面初始化 —— 调用可复用组件 pzz_initTabs 绑定本页「点击排行 / 评论排行」选项卡 */
+  pzz_initTabs("pzz_rankTabs", "pzz_rankPanels");
+</script>
+</body>
+</html>

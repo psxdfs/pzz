@@ -1,3 +1,12 @@
 # 防止 Gitee 令牌随项目提交（git-push-gitee skill 含私人令牌）
 .trae/skills/git-push-gitee/
 .gitee-token.local
+
+# 临时打包产物与本地环境
+.trae-html-share-packages/
+.trae-cn/
+.vscode/
+.idea/
+node_modules/
+*.log
+*.tmp
